@@ -52,6 +52,7 @@ def update_chnl_info_table(chnl_inf_table):
 
 
 def update_chnl_info_file(chnl_inf_file_path, chnl_inf_table):
+
     with open(chnl_inf_file_path, 'w') as chnl_inf:
         for line in chnl_inf_table:
             chnl_inf.write(str(line[0]+','+line[1]+'\n'))
@@ -59,17 +60,19 @@ def update_chnl_info_file(chnl_inf_file_path, chnl_inf_table):
         chnl_inf.close()
 
 
-def check_related(chnl_link, last_post_id, key_words):
-    chnl_id = chnl_link.split('/')[-1]
-    
+def check_related(chnl_id, last_post_id, key_words):
     post = requests.get("https://t.me/"+chnl_id+'/'+last_post_id)
     souped_post = BeautifulSoup(post.text , 'html.parser')
 
     post_text = str(souped_post.findAll('meta')[5])
 
+    # print('New post. checking relation')
+    # print(post_text)
     for word in key_words:
         if word in post_text:
-            print('Related')
+            print('Related!' , word ,'in:')
+            print(post_text)
+            return True
     
 
 def read_keywords(key_words_file_path):
@@ -78,6 +81,30 @@ def read_keywords(key_words_file_path):
         key_words_file.close()
 
     return key_words
+
+
+def check_new_post(chnl_id, chnl_last_post_id):
+    post = requests.get("https://t.me/"+chnl_id+'/'+chnl_last_post_id)
+    souped_post = BeautifulSoup(post.text , 'html.parser')
+    post_text = str(souped_post.findAll('meta')[5])
+
+
+    next_post_id = str(int(chnl_last_post_id)+1)
+    next_post = requests.get("https://t.me/"+chnl_id+'/'+next_post_id)
+    souped_next_post = BeautifulSoup(next_post.text , 'html.parser')
+    next_post_text = str(souped_next_post.findAll('meta')[5])
+
+    if post_text != next_post_text:
+        return True
+    else:
+        return False
+
+
+def sync_chnl_inf_table(chnl_inf_table):
+    for chnl in chnl_inf_table:
+        chnl[1] = str(int(chnl[1])-1)
+    
+    return chnl_inf_table
 
 
 def main():
@@ -95,10 +122,22 @@ def main():
     # read the keywords
     key_words = read_keywords(key_words_file_path)
     
+    # sync chnl last post minus one
+    chnl_inf_table = sync_chnl_inf_table(chnl_inf_table)
+
     print(chnl_inf_table)
     
-    # https://t.me/freelancer_job/78814
-    # check_related('freelancer_job', '78814', key_words)
+
+    while True:
+        for chnl in chnl_inf_table:
+            print(f'checking channel {chnl[0]} post: {chnl[1]}\t\t\t\t')
+            if check_new_post(chnl[0], chnl[1]):
+                chnl[1] = str(int(chnl[1])+1)
+                update_chnl_info_file(chnl_inf_file_path, chnl_inf_table)
+                
+                if check_related(chnl[0], chnl[1], key_words):
+                    log(f'Sending Message: https://t.me/{chnl[0]}/{chnl[1]}', 'i', log_status)
+
     
 
 
