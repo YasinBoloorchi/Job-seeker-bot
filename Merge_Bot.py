@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 log_status = 'v'
-TOKEN = '824647284:AAFu7yEtBCfHa7ZgU3jzD7LNhq2ARSLvDQk'       # define the access token
+TOKEN = '1921436351:AAFT9Kuz5__-58CveHM8iaIfy_05eT-7p3E'       # define the access token
 URL   = 'https://api.telegram.org/bot{}/'.format(TOKEN)       # Telegram bot API url + TOKEN
 
 
@@ -19,7 +19,7 @@ def aux_dec2utf8(resp):                     # a function for decoding HTML conte
 
 def sendMessage(chat_id, message):
     messageRes = requests.post(URL+'sendMessage?chat_id={}&text={}'.format(chat_id,message))
-    print(messageRes)
+    # print(messageRes)
 
 
 def save_subscriber(subscriber_file_path, sub_table):
@@ -189,7 +189,7 @@ def main():
     # sync chnl last post minus one
     chnl_inf_table = sync_chnl_inf_table(chnl_inf_table)
 
-    print(chnl_inf_table)
+    # print(chnl_inf_table)
     
 
     while True:
@@ -209,9 +209,4 @@ def main():
                         sendMessage(subscriber, f'https://t.me/{chnl[0]}/{chnl[1]}')
 
 
-
-
 main()
-
-    
-            

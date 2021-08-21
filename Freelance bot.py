@@ -41,9 +41,10 @@ def getupd(sub_table):
     updates   = json.loads(line)
 
     for upd in updates['result']:
-
+    
         messageText = upd['message']['text']
         chatId = upd['message']['chat']['id']
+
         uid = upd['update_id']
         offset = '?offset={}'.format(uid + 1)
 
@@ -54,16 +55,15 @@ def getupd(sub_table):
 
         print(f'{firstname} said: {messageText}')
 
-        resp = requests.get(URL + cmd + offset)
+        # sendMessage(chatId, messageText)
 
-    return sub_table
+        resp = requests.get(URL + cmd + offset)
     
 
 subscriber_file_path = './subscriber.txt'
 sub_table = load_subscriber(subscriber_file_path)
 while True:
-    sub_table = getupd(sub_table)
-    
+    getupd(sub_table)
             
 
 
