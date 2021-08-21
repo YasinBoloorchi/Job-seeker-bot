@@ -19,36 +19,52 @@ def sendMessage(chat_id, message):
     print(messageRes)
 
 
-def getupd():
+def save_subscriber(subscriber_file_path, sub_table):
+    with open(subscriber_file_path, 'w') as subscriber_file:
+        for line in sub_table:
+            subscriber_file.write((line+'\n'))
+        subscriber_file.close()
+
+
+def load_subscriber(subscriber_file_path):
+    with open(subscriber_file_path, 'r') as subscriber_file:
+        sub_table = list(line for line in subscriber_file.readlines() if len(line)>0)
+        subscriber_file.close()
+    return sub_table
+
+
+def getupd(sub_table):
     cmd   = 'getUpdates'
 
     resp  = requests.get(URL + cmd)                                # reading the url
     line  = aux_dec2utf8(resp)                                     # converting the content to utf-8
     updates   = json.loads(line)
-    
+
     for upd in updates['result']:
-        
-        print(upd)
-        firstname = upd['message']['from']['first_name']
+
         messageText = upd['message']['text']
         chatId = upd['message']['chat']['id']
-
         uid = upd['update_id']
         offset = '?offset={}'.format(uid + 1)
 
-        print(f'{firstname} said {messageText}')
-        sendMessage(chatId, messageText)
-        # system(f'espeak "{firstname} said {messageText}"')
+        if messageText == '/start':
+            if str(chatId) not in sub_table:
+                sub_table.append(str(chatId))
+                save_subscriber(subscriber_file_path,sub_table)
+
+        print(f'{firstname} said: {messageText}')
 
         resp = requests.get(URL + cmd + offset)
+
+    return sub_table
     
 
+subscriber_file_path = './subscriber.txt'
+sub_table = load_subscriber(subscriber_file_path)
 while True:
-    getupd()
+    sub_table = getupd(sub_table)
+    
             
-
-
-
 
 
 

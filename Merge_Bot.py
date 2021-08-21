@@ -1,9 +1,71 @@
 import requests
-from bs4 import BeautifulSoup
+import json
 import re
+from os import system
+from bs4 import BeautifulSoup
 from datetime import datetime
 
 log_status = 'v'
+TOKEN = '824647284:AAFu7yEtBCfHa7ZgU3jzD7LNhq2ARSLvDQk'       # define the access token
+URL   = 'https://api.telegram.org/bot{}/'.format(TOKEN)       # Telegram bot API url + TOKEN
+
+
+def aux_dec2utf8(resp):                     # a function for decoding HTML content to utf-8 format
+    decoded = ''
+    for line in resp:
+        decoded += line.decode('utf-8')
+    return decoded
+
+
+def sendMessage(chat_id, message):
+    messageRes = requests.post(URL+'sendMessage?chat_id={}&text={}'.format(chat_id,message))
+    print(messageRes)
+
+
+def save_subscriber(subscriber_file_path, sub_table):
+    with open(subscriber_file_path, 'w') as subscriber_file:
+        for line in sub_table:
+            subscriber_file.write((line+'\n'))
+        subscriber_file.close()
+
+
+def load_subscriber(subscriber_file_path):
+    with open(subscriber_file_path, 'r') as subscriber_file:
+        sub_table = list(line.strip() for line in subscriber_file.readlines() if len(line)>0)
+        print('sub table: ', sub_table)
+        subscriber_file.close()
+    return sub_table
+
+
+def getupd(subscriber_file_path, sub_table):
+    cmd   = 'getUpdates'
+
+    resp  = requests.get(URL + cmd)                                # reading the url
+    line  = aux_dec2utf8(resp)                                     # converting the content to utf-8
+    updates   = json.loads(line)
+
+    for upd in updates['result']:
+        firstname = upd['message']['from']['first_name']
+        messageText = upd['message']['text']
+        chatId = upd['message']['chat']['id']
+        uid = upd['update_id']
+        offset = '?offset={}'.format(uid + 1)
+
+        if messageText == '/start':
+            if str(chatId) not in sub_table:
+                sub_table.append(str(chatId))
+                save_subscriber(subscriber_file_path,sub_table)
+
+        elif messageText == '/stop':
+            if str(chatId) in sub_table:
+                sub_table.remove(str(chatId))
+                save_subscriber(subscriber_file_path,sub_table)
+
+        log(f'{firstname} send: {messageText}', 'i', log_status)
+
+        resp = requests.get(URL + cmd + offset)
+
+    return sub_table
 
 
 def log(message, m_type, log_status):
@@ -60,7 +122,8 @@ def update_chnl_info_file(chnl_inf_file_path, chnl_inf_table):
         chnl_inf.close()
 
 
-def check_related(chnl_id, last_post_id, key_words):
+def check_related(chnl_id, last_post_id, key_words, key_words_file_path):
+    key_words = read_keywords(key_words_file_path)
     post = requests.get("https://t.me/"+chnl_id+'/'+last_post_id)
     souped_post = BeautifulSoup(post.text , 'html.parser')
 
@@ -106,10 +169,13 @@ def sync_chnl_inf_table(chnl_inf_table):
 
 
 def main():
+    subscriber_file_path = './subscriber.txt'
     key_words_file_path = './keywords.txt'
     chnl_inf_file_path = './channels_info.csv'
-    url = "https://t.me/s/project_board"
     chnl_inf_table = []
+
+    # initial load subscriber chatId
+    sub_table = load_subscriber(subscriber_file_path)
 
     # initial update channels info/last post id
     chnl_inf_table = update_chnl_info_table(read_chnl_info_file(chnl_inf_file_path))
@@ -127,29 +193,25 @@ def main():
     
 
     while True:
+        sub_table = getupd(subscriber_file_path, sub_table)   
+
         for chnl in chnl_inf_table:
             print(f'checking channel {chnl[0]} post: {chnl[1]}\t\t\t\t', end='\r')
             if check_new_post(chnl[0], chnl[1]):
                 chnl[1] = str(int(chnl[1])+1)
                 update_chnl_info_file(chnl_inf_file_path, chnl_inf_table)
                 
-                if check_related(chnl[0], chnl[1], key_words):
+                if check_related(chnl[0], chnl[1], key_words, key_words_file_path):
                     print()
                     log(f'Sending Message: https://t.me/{chnl[0]}/{chnl[1]}', 'i', log_status)
+
+                    for subscriber in sub_table:
+                        sendMessage(subscriber, f'https://t.me/{chnl[0]}/{chnl[1]}')
+
 
 
 
 main()
 
-
-
-
-
-
-
-
-
-
-# token = str(re.findall('.*name=\"(.*)\" t.*value=\"(.*)\"' , rawToken)[0][1])
-# tokenName = str(re.findall('.*name=\"(.*)\" t.*value=\"(.*)\"' , rawTokenName)[0][1])
-# eventVal = str(re.findall('.*name=\"(.*)\" t.*value=\"(.*)\"' , rawEventVal)[0][1])
+    
+            
