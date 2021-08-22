@@ -53,7 +53,7 @@ def getupd(sub_table):
                 sub_table.append(str(chatId))
                 save_subscriber(subscriber_file_path,sub_table)
 
-        print(f'{firstname} said: {messageText}')
+        print(f'Firstname said: {messageText}')
 
         # sendMessage(chatId, messageText)
 

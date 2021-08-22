@@ -86,7 +86,14 @@ def check_new_post(chnl_id, chnl_last_post_id):
     post = requests.get("https://t.me/"+chnl_id+'/'+chnl_last_post_id)
     souped_post = BeautifulSoup(post.text , 'html.parser')
     post_text = str(souped_post.findAll('meta')[5])
-
+    
+    
+    # Fix bug of similar post with re
+    # c = 1
+    # for i in souped_post.findAll('meta'):
+    #     print(c, '-'*50,'\n',i,'\n' ,'-'*50)
+    #     c += 1
+    
 
     next_post_id = str(int(chnl_last_post_id)+1)
     next_post = requests.get("https://t.me/"+chnl_id+'/'+next_post_id)
@@ -143,21 +150,3 @@ def main():
 
 
 main()
-
-# project_board,80104
-# freelancer_job,79033
-# job_finder2020,24171
-# Daneshjoo_com,2411
-# divar_daneshjoyi,20617
-# Project_unii1,19532
-# prozhe_pazhoh,13395
-# Prozhe_Land,6810
-# shoghl_yaby,8908
-# best_projectt,38675
-# sent_projects,19239
-# iProject,12782
-# Project_Daneshjoii,7810
-# Team_Work_Students,3950
-# Daneshjoo_com,2411
-# job_freelancer,17332
-# projet_channel,19105

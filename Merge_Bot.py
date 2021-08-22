@@ -95,7 +95,12 @@ def get_last_post_id(chnl_id):
     souped_web_page = BeautifulSoup(web_page.text , 'html.parser')
 
     all_posts = souped_web_page.findAll('div' , attrs={'class' : 'tgme_widget_message js-widget_message'})
-    last_post_id = all_posts[-1]['data-post'].split('/')[1]
+
+    
+    if len(all_posts) > 0:
+        last_post_id = all_posts[-1]['data-post'].split('/')[1]
+    else:
+        last_post_id = '1'
     
     return last_post_id
 
@@ -137,8 +142,10 @@ def check_related(chnl_id, last_post_id, key_words, key_words_file_path):
 
     for word in key_words:
         if word in post_text:
-            return True
-    
+            return True, word
+
+    return False, ''
+
 
 def read_keywords(key_words_file_path):
     with open(key_words_file_path, 'r') as key_words_file:
@@ -202,16 +209,18 @@ def main():
         sub_table = getupd(subscriber_file_path, sub_table)   
 
         for chnl in chnl_inf_table:
-            # print(f'checking channel post {chnl[1]}')
+            print(f'checking channel {chnl[0]} post {chnl[1]}', end='            \r')
             if check_new_post(chnl[0], chnl[1]):
                 chnl[1] = str(int(chnl[1])+1)
                 update_chnl_info_file(chnl_inf_file_path, chnl_inf_table)
                 
-                if check_related(chnl[0], chnl[1], key_words, key_words_file_path):
-                    log(f'Sending Message: https://t.me/{chnl[0]}/{chnl[1]}', 'i', log_status)
-
+                related, key_word = check_related(chnl[0], chnl[1], key_words, key_words_file_path)
+                 
+                if related:
+                    print()
                     for subscriber in sub_table:
-                        sendMessage(subscriber, f'https://t.me/{chnl[0]}/{chnl[1]}')
+                        sendMessage(subscriber, f'{key_word} \n https://t.me/{chnl[0]}/{chnl[1]}')
+                        log(f'Sending Message: https://t.me/{chnl[0]}/{chnl[1]} -- To: {subscriber} for {key_word}', 'i', log_status)
 
 
 if __name__ == '__main__':
@@ -222,7 +231,3 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             log('Bot Stopped with key interruption', 'i', log_status)
             exit(0)
-        except:
-            log('Something went wrong! bot restarted.', 'e', log_status)
-
-            pass
