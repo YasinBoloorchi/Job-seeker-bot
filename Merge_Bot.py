@@ -19,7 +19,6 @@ def aux_dec2utf8(resp):                     # a function for decoding HTML conte
 
 def sendMessage(chat_id, message):
     messageRes = requests.post(URL+'sendMessage?chat_id={}&text={}'.format(chat_id,message))
-    # print(messageRes)
 
 
 def save_subscriber(subscriber_file_path, sub_table):
@@ -32,8 +31,8 @@ def save_subscriber(subscriber_file_path, sub_table):
 def load_subscriber(subscriber_file_path):
     with open(subscriber_file_path, 'r') as subscriber_file:
         sub_table = list(line.strip() for line in subscriber_file.readlines() if len(line)>0)
-        print('sub table: ', sub_table)
         subscriber_file.close()
+
     return sub_table
 
 
@@ -55,11 +54,18 @@ def getupd(subscriber_file_path, sub_table):
             if str(chatId) not in sub_table:
                 sub_table.append(str(chatId))
                 save_subscriber(subscriber_file_path,sub_table)
+                sendMessage(chatId, 'Bot is now activated for you. Please wait for jobs to send to you.')
+            else:
+                sendMessage(chatId, 'Bot is Already activated for you. Please wait for jobs to send to you.')
 
         elif messageText == '/stop':
             if str(chatId) in sub_table:
                 sub_table.remove(str(chatId))
                 save_subscriber(subscriber_file_path,sub_table)
+                sendMessage(chatId, 'Bot is Deactivated for you.')
+            else:
+                sendMessage(chatId, 'Bot is not active for you. send /start to activation.')
+                
 
         log(f'{firstname} send: {messageText}', 'i', log_status)
 
@@ -84,14 +90,13 @@ def log(message, m_type, log_status):
 
 
 def get_last_post_id(chnl_id):
-    print(f'Getting last post id for channel: {chnl_id}' , end='\r')
+    # print(f'Getting last post id for channel: {chnl_id}' , end='\r')
     web_page = requests.get("https://t.me/s/"+chnl_id)
     souped_web_page = BeautifulSoup(web_page.text , 'html.parser')
 
     all_posts = souped_web_page.findAll('div' , attrs={'class' : 'tgme_widget_message js-widget_message'})
     last_post_id = all_posts[-1]['data-post'].split('/')[1]
     
-    print()
     return last_post_id
 
 
@@ -130,8 +135,6 @@ def check_related(chnl_id, last_post_id, key_words, key_words_file_path):
 
     post_text = str(souped_post.findAll('meta')[5])
 
-    # print('New post. checking relation')
-    # print(post_text)
     for word in key_words:
         if word in post_text:
             return True
@@ -155,9 +158,12 @@ def check_new_post(chnl_id, chnl_last_post_id):
     next_post = requests.get("https://t.me/"+chnl_id+'/'+next_post_id)
     souped_next_post = BeautifulSoup(next_post.text , 'html.parser')
     next_post_text = str(souped_next_post.findAll('meta')[5])
-
+    
     if post_text != next_post_text:
-        return True
+        if 'You can view and join' not in next_post_text:
+            return True
+        else:
+            return False
     else:
         return False
 
@@ -175,6 +181,7 @@ def main():
     chnl_inf_file_path = './channels_info.csv'
     chnl_inf_table = []
 
+    log('Loading initial files.', 'i', log_status)
     # initial load subscriber chatId
     sub_table = load_subscriber(subscriber_file_path)
 
@@ -189,22 +196,18 @@ def main():
     
     # sync chnl last post minus one
     chnl_inf_table = sync_chnl_inf_table(chnl_inf_table)
-
-    # print(chnl_inf_table)
     
-
+    log('Bot Loop started', 'i', log_status)
     while True:
         sub_table = getupd(subscriber_file_path, sub_table)   
 
         for chnl in chnl_inf_table:
-            print(f'checking channel {chnl[0]} post: {chnl[1]}', end='')
-            print('\t'*30, end='\r')
+            # print(f'checking channel post {chnl[1]}')
             if check_new_post(chnl[0], chnl[1]):
                 chnl[1] = str(int(chnl[1])+1)
                 update_chnl_info_file(chnl_inf_file_path, chnl_inf_table)
                 
                 if check_related(chnl[0], chnl[1], key_words, key_words_file_path):
-                    print()
                     log(f'Sending Message: https://t.me/{chnl[0]}/{chnl[1]}', 'i', log_status)
 
                     for subscriber in sub_table:
@@ -213,12 +216,13 @@ def main():
 
 if __name__ == '__main__':
     while True:
+        log('Bot Started.', 'i', log_status)
         try:
             main()
         except KeyboardInterrupt:
-            print('Interrupted')
+            log('Bot Stopped with key interruption', 'i', log_status)
             exit(0)
-
         except:
-            log('Something went wrong!', 'E', log_status)
+            log('Something went wrong! bot restarted.', 'e', log_status)
+
             pass
