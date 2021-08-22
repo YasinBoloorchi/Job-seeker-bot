@@ -84,13 +84,14 @@ def log(message, m_type, log_status):
 
 
 def get_last_post_id(chnl_id):
-    log(f'Getting last post id for channel: {chnl_id}', 'i', log_status)
+    print(f'Getting last post id for channel: {chnl_id}' , end='\r')
     web_page = requests.get("https://t.me/s/"+chnl_id)
     souped_web_page = BeautifulSoup(web_page.text , 'html.parser')
 
     all_posts = souped_web_page.findAll('div' , attrs={'class' : 'tgme_widget_message js-widget_message'})
     last_post_id = all_posts[-1]['data-post'].split('/')[1]
     
+    print()
     return last_post_id
 
 
@@ -196,7 +197,8 @@ def main():
         sub_table = getupd(subscriber_file_path, sub_table)   
 
         for chnl in chnl_inf_table:
-            print(f'checking channel {chnl[0]} post: {chnl[1]}\t\t\t\t', end='\r')
+            print(f'checking channel {chnl[0]} post: {chnl[1]}', end='')
+            print('\t'*30, end='\r')
             if check_new_post(chnl[0], chnl[1]):
                 chnl[1] = str(int(chnl[1])+1)
                 update_chnl_info_file(chnl_inf_file_path, chnl_inf_table)
@@ -209,4 +211,14 @@ def main():
                         sendMessage(subscriber, f'https://t.me/{chnl[0]}/{chnl[1]}')
 
 
-main()
+if __name__ == '__main__':
+    while True:
+        try:
+            main()
+        except KeyboardInterrupt:
+            print('Interrupted')
+            exit(0)
+
+        except:
+            log('Something went wrong!', 'E', log_status)
+            pass
